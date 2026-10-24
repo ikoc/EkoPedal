@@ -86,3 +86,13 @@ py -m unittest discover -s tests
 ## Aşama 1 kapsamı
 
 Bu sürüm yalnızca güvenli temel bağlantı, HID etkinleştirme/devre dışı bırakma, durdurma ve tek tuş gönderme işlevlerini içerir. Gelişmiş zamanlama, fare makroları ve JSON profil düzenleme Aşama 2'ye bırakıldı.
+
+## Kutu tasarımı ve LCD (EkoPedal kontrol kutusu)
+
+- `cad/` CadQuery ile parametrik kutu modelleri (Bambu Lab X2D, PLA+). Seçilen tasarım **B – Kama**
+  (112 × 100 × 59 mm, 20° eğik panel): `cad/baski/B_kama/` baskıya hazır STL'ler, `B_test_kuponu.stl`
+  önce basılacak geçme testi. Ölçüler, montaj malzemesi ve baskı ayarları `cad/README.md`'de.
+  A (Kule) ve C (Yatay) alternatifleri de duruyor. `cad/cikti/EkoPedal_3B.html` etkileşimli 3B görüntüleyici.
+- `arduino lcd led/` HW-61 I2C 16x2 LCD kütüphanesi (`LcdEkran`), enkoder ve I2C tarayıcı testleri.
+  Not: bu örnekler Uno pinleriyle yazıldı; Leonardo'da I2C **SDA = D2, SCL = D3**.
+- `images/` bileşen ve referans fotoğrafları.

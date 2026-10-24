@@ -6,3 +6,7 @@ build/
 *.hex
 *.elf
 *.eep
+
+# EkoPedal CAD: geçici render STL'leri ve yerel ayarlar
+cad/cikti/_stl/
+.claude/
