@@ -31,12 +31,25 @@ A (Kule) ve C (Yatay) alternatifleri 24 Eki'de silindi; git geçmişinde (`2f625
 
 Önerilen: 0.2 mm katman, 3 duvar, %15 gyroid. GX16 delikleri yatay; üst kenarda hafif sarkma flanşın altında kalır.
 
+## ✅ Doğrulanmış montaj ölçüleri (25 Eki 2026, X2D + PLA, gerçek baskıda denendi)
+
+Tekrar kullanılabilir: başka kutularda da aynen al (`ortak.py`).
+
+| Bileşen | Doğrulanan tasarım |
+|---|---|
+| **LCD 1602 + HW-61** | Çerçeve 71.5 × 25.5 × 9.6 (PCB üstü). Panel 3 mm; pencere arkasında çerçeve cebi (çerçeve + 1.2 × + 0.5), cepte 1.6 mm et. 4 kule **8.2 mm**, delik aralığı **75 × 31**, Ø2.5 pilot, M2.5×6 |
+| **Döner enkoder (EC11, düz mil, basmalı)** | Gövde 12.0 × 12.2 × 6.5. Panelde alttan cep (12.4 × 12.6), enkoder yerinde panel **1.6 mm** → topuz panelden ~2 mm yukarıda. 4 köşe L direği (1.8 kalın, 3.5 kol). Tutucu plaka 3 mm, artı boşluk (7.5 genişlik), 2 × M3×6 → panel altı kulelerde Ø4.4 × 5.0 insert. Mil deliği Ø7.4 |
+| **M3 ısıl insert (M3×4×5)** | Delik **Ø4.4**, kule Ø8–9 |
+| **Mini rocker anahtar (13 × 8 × 17)** | Delik **14.0 × 8.3**, duvar içten 1.6 mm'ye inceltilir (cep ≥ 20.2 × 14.3) |
+| **GX16** | Delik **Ø16.2** |
+| **Arduino Leonardo** | Delik konumları doğru (68.5 × 54.0 kart, standart Uno deseni). Ayak Ø6 × 5 mm. Pilot delik Ø2.6 dardı → **Ø2.9 × 6.6** (M3 dişini açar; LCD ile aynı yöntem) – yeni değer henüz basılmadı |
+
 ## Montaj malzemesi
 
 - B için **6 × M3×4×5 ısıl insert** → delik **Ø4.4** (X2D/PLA kuponunda en iyi oturan, Auvidea v12f)
   - 4 tanesi gövde kulelerinde: panel 4 × M3×8 havşa vidayla
   - 2 tanesi panel altında: enkoder tutucu plaka 2 × **M3×6** vidayla (delik 5.0 derin, ön yüz kabarmasın diye)
-- LCD: 4 × M2.5×6 veya M3 sac vidası; Leonardo: 4 × M3×6 sac vidası (Ø2.6 pilot)
+- LCD: 4 × M2.5×6; Leonardo: 4 × **M3×8** (Ø2.9 pilot, vida kendi dişini açar)
 - 4 × Ø10 lastik ayak
 
 ## Ölçüler (24 Eki 2026, kumpasla ölçüldü → `ortak.py`)

@@ -35,8 +35,8 @@ def build():
     cuts += [put(cyl(INSERT_R, -INSERT_L, 0.5, x, y), Pp) for x, y in BOSS_P]
     # Leonardo standoffları (tabanda)
     so = [(LEO_X0 + hx, LEO_Y0 + hy) for hx, hy in LEO_HOLES]
-    tub = tub.fuse(U(*[cyl(3.0, BASE - 0.1, BASE + LEO_STANDOFF, x, y) for x, y in so]))
-    cuts += [cyl(1.3, BASE + 0.6, BASE + LEO_STANDOFF + 0.1, x, y) for x, y in so]
+    tub = tub.fuse(U(*[cyl(LEO_STANDOFF_R, BASE - 0.1, BASE + LEO_STANDOFF, x, y) for x, y in so]))
+    cuts += [cyl(LEO_PILOT_R, LEO_PILOT_FLOOR, BASE + LEO_STANDOFF + 0.1, x, y) for x, y in so]   # M3, 6.6 derin
     dums += [(mv(s, LEO_X0, LEO_Y0, BASE + LEO_STANDOFF), c) for s, c in leo_dummy()]
     # Lastik ayak yuvaları
     cuts += [cyl(5.25, -1, 1.0, x, y) for x in (-W / 2 + 14, W / 2 - 14) for y in (12, 88)]

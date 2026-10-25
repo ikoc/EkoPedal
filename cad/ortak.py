@@ -1,5 +1,8 @@
 """EkoPedal ortak ölçüler, kesiciler ve görsel yer tutucular (dummy).
 
+25 Eki 2026: LCD (kule 8.2, delik 75x31), enkoder cebi + tutucu, insert Ø4.4, anahtar 14.0x8.3,
+GX16 Ø16.2 ve Leonardo delik konumları GERÇEK BASKIDA DOĞRULANDI - değiştirmeden önce düşün.
+
 Kesici/dummy fonksiyonları YEREL koordinatta çalışır:
   panelin dış yüzü z=0, malzeme z<0 tarafında, dışa bakan yön +Z.
 `put(shape, plane)` ile duvar/panel üzerine taşınır.
@@ -39,6 +42,9 @@ LEO = (68.5, 54.0)                          # Arduino Leonardo (ölçüldü)
 LEO_HOLES = [(14.0, 2.5), (15.3, 50.7), (66.1, 7.6), (66.1, 35.5)]
 LEO_USB_Y = 54.0 - 16.0                     # micro-USB merkezi: karşı köşeden 12.0..20.0 ölçüldü
 LEO_STANDOFF = 5.0
+LEO_STANDOFF_R = 3.0                        # ayak Ø6 (konumlar baskıda doğrulandı)
+LEO_PILOT_R = 1.45                          # M3 vida kendi dişini açar (LCD'deki gibi: pilot ≈ vida çapı). Eski Ø2.6 dardı
+LEO_PILOT_FLOOR = 0.8                       # pilot delik tabanın altında 0.8 mm et bırakır (taban kapalı)
 LEO_USB_Z = LEO_STANDOFF + 1.6 + 1.4        # kart tabanından USB merkezine (standoff dahil)
 
 INSERT_R = 2.2                              # M3x4x5 insert: X2D kuponunda en iyi Ø4.4 (Auvidea v12f)
