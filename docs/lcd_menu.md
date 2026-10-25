@@ -8,6 +8,8 @@ surum `firmware/leonardo_footswitch/leonardo_footswitch.ino` olarak sakli.
 
 ## Pinler
 
+Güncel ve doğrulanmış liste: [`PIN_HARITASI.md`](PIN_HARITASI.md).
+
 | Parca | Leonardo | Diger uc |
 | --- | --- | --- |
 | 78/28 kombo pedali | D8 | GND |
@@ -21,6 +23,7 @@ surum `firmware/leonardo_footswitch/leonardo_footswitch.ino` olarak sakli.
 | HW-61 LCD VCC | 5V | - |
 | HW-61 LCD SDA | D2 / SDA | - |
 | HW-61 LCD SCL | D3 / SCL | - |
+| Acma/kapama anahtari (yazilimsal) | A0 | GND |
 
 Leonardo'nun D2 ve D3 pinleri ayni zamanda donanimsal I2C SDA/SCL
 pinleridir. Eski D2 makro butonu bu surumde kullanilmaz. Onu D2'den ayirin;

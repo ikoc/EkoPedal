@@ -12,6 +12,7 @@
 // Minor labels map fastest-to-slowest: 25, 23, 21, 19.
 // Ultra-fast timing: 1 ms key hold and 1 ms gap for 25 minor.
 // Stable HID timing restored to 5 ms like the original working firmware.
+// A0 power switch (software): switch open = KAPALI, pedals/macros send nothing.
 
 const uint8_t FOOTSWITCH_PIN = 8;
 const uint8_t MENU_BUTTON_PIN = 7;
@@ -20,6 +21,7 @@ const uint8_t ENCODER_B_PIN = 9;
 const uint8_t NUM_LOCK_PEDAL_PIN = 5;
 const uint8_t SCROLL_LOCK_PEDAL_PIN = 4;
 const uint8_t ACTIVE_LED_PIN = 10;
+const uint8_t POWER_SWITCH_PIN = A0;  // acma/kapama anahtari A0-GND; kontak kapali (I) = ACIK
 
 const unsigned long PRESS_DEBOUNCE_MS = 30;
 const unsigned long RELEASE_DEBOUNCE_MS = 50;
@@ -38,6 +40,7 @@ const unsigned long MOUSE_SETTLE_MS = 25;
 const unsigned long ITEM_SETTLE_MS = 180;
 const unsigned long MENU_HOLD_MS = 700;
 const unsigned long MENU_DEBOUNCE_MS = 35;
+const unsigned long POWER_DEBOUNCE_MS = 40;
 const uint32_t SETTINGS_MAGIC = 0x4B4F4D31UL;
 const uint8_t SETTINGS_VERSION = 9; // restore stable HID timing from original firmware
 
@@ -91,7 +94,7 @@ struct LockPedal {
 LockPedal numLockPedal = {NUM_LOCK_PEDAL_PIN, KEY_NUM_LOCK, false, false, false, false, 0, 0};
 LockPedal scrollLockPedal = {SCROLL_LOCK_PEDAL_PIN, KEY_SCROLL_LOCK, false, false, false, false, 0, 0};
 
-enum UiState { UI_IDLE, UI_MENU, UI_EDIT, UI_ACTIVE };
+enum UiState { UI_IDLE, UI_MENU, UI_EDIT, UI_ACTIVE, UI_OFF };
 enum MenuItem { MENU_MINOR_GROUP, MENU_STYX_GROUP, MENU_BOW_GROUP, MENU_DEFAULTS, MENU_SAVE, MENU_COUNT, MENU_MINOR, MENU_MANA, MENU_HP, MENU_MINOR_DELAY, MENU_MOUSE, MENU_DISPLAY, MENU_FIVE_BOW, MENU_THREE_BOW, MENU_BOW_DELAY };
 struct __attribute__((packed)) Settings {
   uint32_t magic;
@@ -130,6 +133,9 @@ bool lcdPresent = false;
 char lcdWanted[2][17] = {{0}, {0}};
 char lcdShown[2][17] = {{0}, {0}};
 uint8_t lcdScanIndex = 0;
+bool powerOn = true;
+bool powerRaw = true;
+unsigned long powerChangedMs = 0;
 
 const char * const MENU_NAMES[] = {"MinorManaPot", "Styx ayarlari", "3lu5li okcu", "Varsayilan", "Kaydet/Geri"};
 const char * const MINOR_NAMES[] = {"Minor tusu", "Mana tusu", "HP tusu", "Minor delay", "Kaydet/Geri"};
@@ -319,6 +325,9 @@ void showUi() {
   } else if (uiState == UI_ACTIVE) {
     snprintf(top, sizeof(top), "eKO PEDAL");
     snprintf(bottom, sizeof(bottom), "HAZIR");
+  } else if (uiState == UI_OFF) {
+    snprintf(top, sizeof(top), "eKO PEDAL");
+    snprintf(bottom, sizeof(bottom), "KAPALI");
   } else if (uiState == UI_MENU) {
     if (submenu == 1) {
       snprintf(top, sizeof(top), "MINOR %u/5", submenuItem + 1);
@@ -388,7 +397,8 @@ void stopSequence() {
   stepIndex = 0;
 }
 
-void enterMenu() {
+// Calisan kombo/okcu/Styx makrosunu durdurur, basili tus ve fare tusunu birakir.
+void haltOutputs() {
   stopSequence();
   stopScrollSequence();
   BootKeyboard.releaseAll();
@@ -396,6 +406,42 @@ void enterMenu() {
   numLockPedal.keyHeld = false;
   scrollLockPedal.keyHeld = false;
   macroStep = MACRO_IDLE;
+}
+
+void enterOff() {
+  haltOutputs();
+  setPedalLed(false);
+  uiState = UI_OFF;
+  Serial.println("POWER OFF");
+  showUi();
+}
+
+bool readPowerSwitch() {
+  return digitalRead(POWER_SWITCH_PIN) == LOW;
+}
+
+void updatePowerSwitch(unsigned long now) {
+  const bool on = readPowerSwitch();
+  if (on != powerRaw) {
+    powerRaw = on;
+    powerChangedMs = now;
+  }
+  if (now - powerChangedMs < POWER_DEBOUNCE_MS || on == powerOn) return;
+  powerOn = on;
+  if (!powerOn) {
+    enterOff();
+    return;
+  }
+  Serial.println("POWER ON");
+  // Anahtar acilirken basili tutulan menu butonu menu acmasin.
+  menuRawPressed = menuStablePressed = digitalRead(MENU_BUTTON_PIN) == LOW;
+  menuRawChangedMs = now;
+  menuLongDone = menuStablePressed;
+  startActive();  // pedallar once birakilmadan tus gondermez
+}
+
+void enterMenu() {
+  haltOutputs();
   uiState = UI_MENU;
   menuItem = MENU_MINOR_GROUP;
   submenu = 0;
@@ -849,6 +895,9 @@ void setup() {
   initLockPedal(scrollLockPedal);
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(ACTIVE_LED_PIN, OUTPUT);
+  pinMode(POWER_SWITCH_PIN, INPUT_PULLUP);
+  powerRaw = powerOn = readPowerSwitch();
+  powerChangedMs = millis();
   setPedalLed(false);
   menuRawPressed = menuStablePressed = digitalRead(MENU_BUTTON_PIN) == LOW;
   menuRawChangedMs = millis();
@@ -863,6 +912,7 @@ void setup() {
   lcdSetLine(1, "Hazirlaniyor");
   delay(1200);
   startActive();
+  if (!powerOn) enterOff();
 }
 
 void updatePedal(unsigned long now) {
@@ -962,6 +1012,11 @@ void updatePedal(unsigned long now) {
 
 void loop() {
   const unsigned long now = millis();
+  updatePowerSwitch(now);
+  if (!powerOn) {
+    lcdFlushOne();
+    return;
+  }
   updateMenuButton(now);
   updateEncoder();
   updatePedal(now);

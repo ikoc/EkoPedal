@@ -34,6 +34,8 @@ alınmıştır.
 
 ## Pin haritası
 
+Ayrıntılı ve doğrulanmış tam liste (GND hattı, enkoder bacakları, konnektörler, test): [`docs/PIN_HARITASI.md`](PIN_HARITASI.md).
+
 | İşlev | Leonardo pini |
 |---|---|
 | Minor pedal | D8 - GND |
@@ -46,6 +48,13 @@ alınmıştır.
 | LCD SDA | D2 / SDA |
 | LCD SCL | D3 / SCL |
 | LCD VCC/GND | 5V / GND |
+| Açma/kapama anahtarı (yazılımsal) | A0 - GND |
+
+**Açma/kapama anahtarı (25 Eki):** A0 ile GND arasına bağlanır (`INPUT_PULLUP`). Kontak kapalı (I) =
+AÇIK, açık (O) = KAPALI. Kapalıyken çalışan kombo/okçu/Styx makrosu durur, basılı tuş ve fare tuşu
+bırakılır, pedallar ve menü hiçbir şey göndermez; LCD `eKO PEDAL / KAPALI` yazar. Açılınca aktif moda
+döner; o an basılı tutulan pedal önce bırakılmadan tuş göndermez. Anahtar bağlı değilse A0 HIGH kalır
+ve cihaz KAPALI görünür.
 
 Kablo değiştirirken USB gücü kesilmelidir. Pedal girişleri `INPUT_PULLUP` kullanır;
 harici direnç gerekmez.
@@ -93,6 +102,8 @@ LCD düzenleme ekranları hangi tuşun değiştirildiğini açıkça yazar (`MIN
 ## Önemli dosyalar
 
 - `firmware/leonardo_menu/leonardo_menu.ino`: güncel firmware
+- `docs/PIN_HARITASI.md`: doğrulanmış tam pin haritası (25 Eki 2026)
+- `firmware/baglanti_testi/baglanti_testi.ino`: tuş göndermeyen bağlantı testi (LCD'de canlı durum)
 - `docs/wiring.md`: genel bağlantı notları
 - `docs/lcd_menu.md`: LCD/pin notları (tarihsel; bu dosyadaki güncel haritayı esas al)
 - `firmware/leonardo_footswitch/leonardo_footswitch.ino`: ilk çalışan standalone firmware

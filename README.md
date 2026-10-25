@@ -3,7 +3,7 @@
 ## Güncel proje durumu
 
 Windows'ta devam ederken önce [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md)
-dosyasını okuyun. Güncel firmware `firmware/leonardo_menu/leonardo_menu.ino`
+dosyasını okuyun. Kablolama için: [`docs/PIN_HARITASI.md`](docs/PIN_HARITASI.md). Güncel firmware `firmware/leonardo_menu/leonardo_menu.ino`
 içindedir; ilk çalışan sürüm `firmware/leonardo_footswitch/` altında korunur.
 
 Yeni hedef, bilgisayar uygulamasi olmadan calisan bir USB footswitch'tir.
