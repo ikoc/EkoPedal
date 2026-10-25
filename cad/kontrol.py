@@ -1,5 +1,5 @@
 """İç çakışma kontrolü: bileşen yer tutucuları gövde/kapak/panel ile ve birbirleriyle çakışıyor mu."""
-import itertools, kutu_on, kama
+import itertools, kama
 from ortak import C_TEXT
 
 def check(tag, parts, dums):
@@ -17,7 +17,5 @@ def check(tag, parts, dums):
             print(f"  {tag}: dummy#{i} x dummy#{j}: {v:.1f} mm3"); bad += 1
     print(f"{tag}: {'OK' if not bad else str(bad)+' cakisma'}")
 
-for tag, p in (("A", kutu_on.A), ("C", kutu_on.C)):
-    check(tag, *kutu_on.build(p))
 pb, db, _ = kama.build()
 check("B", pb, db)

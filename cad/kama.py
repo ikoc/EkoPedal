@@ -16,7 +16,6 @@ L = DP / CA                                          # panel boyu (eğim boyunca
 
 LCD_P = (0, 71)                                      # panel yerel (x, eğim boyunca y)
 ENC_P = (34, 30)
-TEXT_P = ("eKO PEDAL", 7.5, -20, 30)
 BOSS_P = [(sx * (W / 2 - 7), y) for sx in (-1, 1) for y in (7, L - 7)]
 GX_X = (-27, 0, 27)
 GX_Z = 16
@@ -64,17 +63,16 @@ def build():
     ra, rc = enc_retainer_bosses(PT)
     panel = panel.fuse(mv(ra, ENC_P[0], ENC_P[1], PT))
     pc = [mv(c, LCD_P[0], LCD_P[1], PT), mv(lcd_cut(PT), LCD_P[0], LCD_P[1], PT),
-          mv(rrect(88, 48, 4, -0.6, 1, *LCD_P), 0, 0, PT),
+          # LCD çerçeve OLUĞU (0.8 geniş, 0.6 derin). Eskiden 88x48 düz girintiydi: ön yüz tablada basılınca
+          # girinti tabanı 0.6 mm havada kalıyordu (kupon 2'de LCD bölümü tablaya tutmadı).
+          mv(rrect(88, 48, 4, -0.6, 1, *LCD_P).cut(rrect(86.4, 46.4, 3.2, -1, 2, *LCD_P)), 0, 0, PT),
           mv(enc_cut(PT), ENC_P[0], ENC_P[1], PT),
           mv(rc, ENC_P[0], ENC_P[1], PT),
           mv(cyl(KNOB_D / 2 + 4.8, -0.6, 1).cut(cyl(KNOB_D / 2 + 4.0, -1, 2)), ENC_P[0], ENC_P[1], PT)]
-    s, size, tx, ty = TEXT_P
-    pc.append(mv(text_solid(s, size, 0.6, tx, ty), 0, 0, PT + 0.01))
     for x, y in BOSS_P:                              # M3 havşa
         pc += [cyl(M3_R, -1, PT + 1, x, y),
                cq.Solid.makeCone(M3_R, 3.3, 1.6, V(x, y, PT - 1.6)), cyl(3.3, PT - 0.01, PT + 1, x, y)]
     panel = panel.cut(U(*pc))
-    inlay = mv(text_solid(s, size, 0.6, tx, ty), 0, 0, PT)
 
     pd = []
     pd += [(mv(sh, LCD_P[0], LCD_P[1], PT), col) for sh, col in lcd_dummy()]
@@ -83,15 +81,20 @@ def build():
 
     ret = mv(enc_retainer(), ENC_P[0], ENC_P[1], PT)
     parts = {"govde": (tub, C_BODY), "panel": (put(panel, Pp), C_LID),
-             "yazi_inlay": (put(inlay, Pp), C_TEXT), "enkoder_tutucu": (put(ret, Pp), C_LID)}
-    local = {"panel": panel, "yazi_inlay": inlay, "enkoder_tutucu": ret}
+             "enkoder_tutucu": (put(ret, Pp), C_LID)}
+    local = {"panel": panel, "enkoder_tutucu": ret}
     return parts, dums, local
 
 
 def print_pose(name, shape, local):
+    """Baskı yönü: gövde taban tablada, panel ön yüz tablada, tutucu düz."""
     if name == "enkoder_tutucu":
         shape = local[name]
-    elif name in local:                              # dış yüz tablaya
-        shape = local[name].rotate(V(0, 0, 0), V(1, 0, 0), 180)
+        bb = shape.BoundingBox()
+        return shape.translate(V(-bb.center.x, -bb.center.y, -bb.zmin))
+    if name == "panel":
+        flip = lambda s: s.rotate(V(0, 0, 0), V(1, 0, 0), 180)
+        bb = flip(local["panel"]).BoundingBox()
+        return flip(local[name]).translate(V(-bb.center.x, -bb.center.y, -bb.zmin))
     bb = shape.BoundingBox()
     return shape.translate(V(-bb.center.x, -bb.center.y, -bb.zmin))

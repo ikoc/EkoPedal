@@ -44,7 +44,6 @@ def build_items():
 
     add("govde", parts["govde"][0], C_BODY, [0, 0, 0])
     add("panel", parts["panel"][0], C_LID, nvec(70))
-    add("yazi", parts["yazi_inlay"][0], C_TEXT, nvec(92))
     add("tutucu", parts["enkoder_tutucu"][0], (0.85, 0.55, 0.15), nvec(25))
     # dummy sırası: leo(4) gx(3x3) anahtar(3) lcd(3) enkoder(4)
     for s, c in dums[0:4]:
@@ -79,20 +78,19 @@ def build_items():
 INFO = {
     "govde": ("Gövde", "Basılır", f"{kama.W:.0f} × {kama.DP:.0f} × {kama.H1:.0f} mm · PLA+ · taban tablada, desteksiz. 4 eğik kule (insert), Leonardo ayakları, 3 × GX16, anahtar ve USB delikleri, 4 lastik ayak yuvası."),
     "panel": ("Üst panel", "Basılır", f"{kama.W:.0f} × {kama.L:.0f} × 3 mm, {math.degrees(kama.ANG):.0f}° eğik. Dış yüz tablada basılır. LCD penceresi, enkoder cebi, 4 × M3 havşa delik."),
-    "yazi": ("eKO PEDAL yazısı", "Basılır", "0.6 mm dolgu yazı. Bambu Studio'da panelle 'tek nesne, çok parça' yükle, 2. renk ata (AMS)."),
     "tutucu": ("Enkoder tutucu", "Basılır", "36 × 22 × 3 mm. Enkoder gövdesini köşelerinden panele bastırır; artı boşluktan bacaklar geçer. 2 × M3×8."),
-    "lcd": ("LCD 1602 + HW-61", "Elektronik", "Çerçeve 71.5 × 25.5 × 9.6, delik aralığı 74 × 30 (ölçüldü). Panel altındaki 4 kuleye (8.2 mm, Ø2.5 pilot) M2.5×6 ile."),
+    "lcd": ("LCD 1602 + HW-61", "Elektronik", "Çerçeve 71.5 × 25.5 × 9.6, delik aralığı 75 × 31. Panel altındaki 4 kuleye (8.2 mm, Ø2.5 pilot) M2.5×6 ile."),
     "enkoder": ("Enkoder (EC11)", "Elektronik", "Gövde 12.0 × 12.2 × 6.5, bacak 3.5 (ölçüldü). Düz mil, cebe oturur."),
     "topuz": ("Metal topuz", "Elektronik", "Ø14.5 × 16.5 (ölçüldü). Panelden ~2 mm yukarıda kalacak şekilde mile tak."),
     "leo": ("Arduino Leonardo", "Elektronik", "68.5 × 54.0 (ölçüldü). Tabandaki 4 ayağa M3×6 sac vidası; micro-USB sol duvardan çıkar."),
     "gx1": ("GX16 – Pedal 1", "Elektronik", "Ø16.2 delik, arka duvar. Arkada ~15 mm yer kaplar."),
     "gx2": ("GX16 – Pedal 2", "Elektronik", "Ø16.2 delik, arka duvar."),
     "gx3": ("GX16 – Pedal 3", "Elektronik", "Ø16.2 delik, arka duvar."),
-    "anahtar": ("Açma/kapama anahtarı", "Elektronik", "Mini rocker, gövde 13 × 8 × 17 (ölçüldü). Sağ yan duvarın altında, 13.2 × 8.3 delik; duvar 1.6 mm'ye inceltilmiş."),
+    "anahtar": ("Açma/kapama anahtarı", "Elektronik", "Mini rocker, gövde 13 × 8 × 17 (ölçüldü). Sağ yan duvarın altında, 14.0 × 8.3 delik; duvar 1.6 mm'ye inceltilmiş."),
     "insert": ("M3 × 4 × 5 insert (6)", "Bağlantı", "Ø4.4 delik (X2D/PLA kuponunda en iyi oturan). 4 gövdede, 2 panel altında."),
     "vida": ("M3 vidalar (6)", "Bağlantı", "4 × M3×8 havşa başlı (panel), 2 × M3×6 silindir başlı (enkoder tutucu)."),
 }
-GROUPS = [("Basılan parçalar", ["govde", "panel", "yazi", "tutucu"]),
+GROUPS = [("Basılan parçalar", ["govde", "panel", "tutucu"]),
           ("Elektronik", ["lcd", "enkoder", "topuz", "leo", "gx1", "gx2", "gx3", "anahtar"]),
           ("Bağlantı", ["insert", "vida"])]
 

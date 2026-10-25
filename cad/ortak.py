@@ -12,7 +12,7 @@ from cadquery import Vector as V
 
 # ---------------- Bileşen ölçüleri (mm) ----------------
 LCD_PCB = (80.0, 36.0, 1.6)                 # 1602 LCD kartı
-LCD_HOLE_PITCH = (74.0, 30.0)               # merkezden merkeze: dış 77 x 33 - Ø3 (ölçüldü 24 Eki)
+LCD_HOLE_PITCH = (75.0, 31.0)               # merkezden merkeze. 74x30 (ölçüm) kuponda olmadı -> her yön +1 (25 Eki)
 LCD_HOLES = [(sx * LCD_HOLE_PITCH[0] / 2, sy * LCD_HOLE_PITCH[1] / 2) for sx in (-1, 1) for sy in (-1, 1)]
 LCD_BEZEL = (71.5, 25.5)                    # siyah çerçeve (ölçüldü 24 Eki)
 LCD_BEZEL_H = 9.6                           # çerçevenin PCB üstünden yüksekliği (ölçüldü)
@@ -28,7 +28,7 @@ ENC_LEGS = 3.5                              # 26.5 - 23.0
 ENC_SKIN = 1.6                              # enkoder yerinde panel kalınlığı (topuz boşluğu için)
 
 SW_BODY = (13.0, 8.0, 17.0)                 # mini rocker gövdesi en x boy x derinlik (ölçüldü 24 Eki)
-SW_CUT = (SW_BODY[0] + 0.2, SW_BODY[1] + 0.3)  # pano deliği 13.2 x 8.3
+SW_CUT = (14.0, SW_BODY[1] + 0.3)             # pano deliği 14.0 x 8.3 (kupon 1: 13.2 dar geldi; kullanıcı 14 istedi)
 SW_TAB = 16.0                               # 13 mm kenarda tırnaklar açıkken (ölçüldü)
 SW_SKIN = 1.6                               # tırnakların tutması için duvar inceltme
 

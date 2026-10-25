@@ -154,7 +154,7 @@ input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
   const D = JSON.parse(document.getElementById('data').textContent);
   const $ = id => document.getElementById(id);
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const PRINTED = new Set(['govde', 'panel', 'yazi', 'tutucu']);
+  const PRINTED = new Set(['govde', 'panel', 'tutucu']);
   const COLOR_OVERRIDE = { govde: '#363a41', panel: '#4a4f57' };
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
@@ -337,7 +337,7 @@ input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
   }
   $('showAll').onclick = () => showOnly(() => true);
   $('onlyPrint').onclick = () => showOnly(k => PRINTED.has(k));
-  $('onlyElec').onclick = () => showOnly(k => k !== 'panel' && k !== 'yazi');
+  $('onlyElec').onclick = () => showOnly(k => k !== 'panel');
 
   // ---- seçim ----
   let selected = null;

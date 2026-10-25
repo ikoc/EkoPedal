@@ -1,4 +1,4 @@
-"""3 tasarımı üretir: STL (baskı yönünde) -> baski/<tasarim>/, render PNG -> cikti/.
+"""B (Kama) tasarımını üretir: STL (baskı yönünde) -> baski/B_kama/, render PNG -> cikti/.
 
 Çalıştır (EkoPedal/cad içinden):
   ../../AuvideaHailoH15/.venv_local/bin/python hepsi.py
@@ -8,7 +8,7 @@ from pathlib import Path
 import cadquery as cq
 from cadquery import Vector as V
 import render
-import kutu_on, kama
+import kama
 
 HERE = Path(__file__).parent
 OUT = HERE / "cikti"
@@ -40,19 +40,8 @@ def report(tag, parts):
               f"hacim {s.Volume()/1000:.1f} cm3, gecerli={s.isValid()}")
 
 
-def run(which="ABC"):
+def run(which="B"):
     OUT.mkdir(exist_ok=True)
-    if "A" in which or "C" in which:
-        for tag, prm, folder in (("A", kutu_on.A, "A_kule"), ("C", kutu_on.C, "C_yatay")):
-            if tag not in which:
-                continue
-            parts, dums = kutu_on.build(prm)
-            report(tag, parts)
-            d = BASKI / folder; d.mkdir(parents=True, exist_ok=True)
-            for n, (s, _) in parts.items():
-                stl(kutu_on.print_pose(n, s), d / f"{tag}_{n}.stl")
-            items = [(s, c) for s, c in parts.values()] + dums
-            shots(tag, items, kutu_on.to_view, (0.7, -1.3, -0.9))
     if "B" in which:
         parts, dums, local = kama.build()
         report("B", parts)
@@ -64,4 +53,4 @@ def run(which="ABC"):
 
 
 if __name__ == "__main__":
-    run(sys.argv[1] if len(sys.argv) > 1 else "ABC")
+    run(sys.argv[1] if len(sys.argv) > 1 else "B")
