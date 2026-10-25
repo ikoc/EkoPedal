@@ -3,8 +3,20 @@
 #include <EEPROM.h>
 #include <stddef.h>
 
+// Firmware build: nested menus and eKO PEDAL splash.
+// LCD edit labels identify the selected skill.
+// Short pedal presses complete the two-key Minor sequence.
+// Lock pedals trigger their macros directly for hosts without LED feedback.
+// A second D4 press stops the direct-test loop.
+// Default Minor timing is the fastest 25-minor preset.
+// Minor labels map fastest-to-slowest: 25, 23, 21, 19.
+// Ultra-fast timing: 1 ms key hold and 1 ms gap for 25 minor.
+// Stable HID timing restored to 5 ms like the original working firmware.
+
 const uint8_t FOOTSWITCH_PIN = 8;
 const uint8_t MENU_BUTTON_PIN = 7;
+const uint8_t ENCODER_A_PIN = 6;
+const uint8_t ENCODER_B_PIN = 9;
 const uint8_t NUM_LOCK_PEDAL_PIN = 5;
 const uint8_t SCROLL_LOCK_PEDAL_PIN = 4;
 const uint8_t ACTIVE_LED_PIN = 10;
@@ -27,7 +39,7 @@ const unsigned long ITEM_SETTLE_MS = 180;
 const unsigned long MENU_HOLD_MS = 700;
 const unsigned long MENU_DEBOUNCE_MS = 35;
 const uint32_t SETTINGS_MAGIC = 0x4B4F4D31UL;
-const uint8_t SETTINGS_VERSION = 1;
+const uint8_t SETTINGS_VERSION = 9; // restore stable HID timing from original firmware
 
 // Inventory positions in the supplied 1280x1024 screenshots.
 const int BASE_SCREEN_WIDTH = 1280;
@@ -80,19 +92,28 @@ LockPedal numLockPedal = {NUM_LOCK_PEDAL_PIN, KEY_NUM_LOCK, false, false, false,
 LockPedal scrollLockPedal = {SCROLL_LOCK_PEDAL_PIN, KEY_SCROLL_LOCK, false, false, false, false, 0, 0};
 
 enum UiState { UI_IDLE, UI_MENU, UI_EDIT, UI_ACTIVE };
-enum MenuItem { MENU_RUN, MENU_COMBO, MENU_MOUSE, MENU_STYX, MENU_DISPLAY, MENU_SAVE, MENU_COUNT };
+enum MenuItem { MENU_MINOR_GROUP, MENU_STYX_GROUP, MENU_BOW_GROUP, MENU_DEFAULTS, MENU_SAVE, MENU_COUNT, MENU_MINOR, MENU_MANA, MENU_HP, MENU_MINOR_DELAY, MENU_MOUSE, MENU_DISPLAY, MENU_FIVE_BOW, MENU_THREE_BOW, MENU_BOW_DELAY };
 struct __attribute__((packed)) Settings {
   uint32_t magic;
   uint8_t version;
   uint8_t comboMode;  // 0=follow Caps Lock, 1=78, 2=28
-  uint8_t resolution; // 0=1280x1024, 1=1920x1080, 2=2560x1440
+  uint8_t resolution;
+  uint8_t minorKey;
+  uint8_t manaKey;
+  uint8_t hpKey;
+  uint8_t fiveBowKey;
+  uint8_t threeBowKey;
+  uint8_t minorDelayIndex;
   uint16_t mouseMoveMs;
   uint16_t styxDelayMs;
+  uint16_t bowDelayMs;
   uint16_t checksum;
 };
-Settings settings = {SETTINGS_MAGIC, SETTINGS_VERSION, 0, 0, 40, 75, 0};
+Settings settings = {SETTINGS_MAGIC, SETTINGS_VERSION, 0, 0, 8, 7, 2, 3, 4, 0, 40, 75, 0, 0};
 UiState uiState = UI_IDLE;
-uint8_t menuItem = MENU_RUN;
+uint8_t menuItem = MENU_MINOR;
+uint8_t submenu = 0;
+uint8_t submenuItem = 0;
 bool settingsDirty = false;
 bool menuRawPressed = false;
 bool menuStablePressed = false;
@@ -102,19 +123,28 @@ unsigned long menuPressedMs = 0;
 bool comboMenuRaw = false;
 bool comboMenuStable = false;
 unsigned long comboMenuChangedMs = 0;
+uint8_t encoderLastState = 0;
+int8_t encoderQuarterSteps = 0;
 uint8_t lcdAddress = 0;
 bool lcdPresent = false;
 char lcdWanted[2][17] = {{0}, {0}};
 char lcdShown[2][17] = {{0}, {0}};
 uint8_t lcdScanIndex = 0;
 
-const char * const MENU_NAMES[] = {"Baslat/Durdur", "Skill bar", "Mouse delay", "Styx delay", "Ekran ayari", "Kaydet/Cik"};
-const uint16_t SCREEN_WIDTHS[] = {1280, 1920, 2560};
-const uint16_t SCREEN_HEIGHTS[] = {1024, 1080, 1440};
+const char * const MENU_NAMES[] = {"MinorManaPot", "Styx ayarlari", "3lu5li okcu", "Varsayilan", "Kaydet/Geri"};
+const char * const MINOR_NAMES[] = {"Minor tusu", "Mana tusu", "HP tusu", "Minor delay", "Kaydet/Geri"};
+const char * const STYX_NAMES[] = {"Styx gecikme", "Cozunurluk", "Kaydet/Geri"};
+const char * const BOW_NAMES[] = {"5li ok tusu", "3lu ok tusu", "Okcu delay", "Kaydet/Geri"};
+const uint8_t MINOR_LABEL_VALUES[] = {25, 23, 21, 19};
+const uint8_t MINOR_DELAY_MS[] = {5, 6, 7, 8};
+const uint8_t RESOLUTION_COUNT = 13;
+const uint16_t SCREEN_WIDTHS[RESOLUTION_COUNT] = {1024, 1280, 1280, 1280, 1366, 1440, 1600, 1680, 1920, 1920, 2048, 2560, 2560};
+const uint16_t SCREEN_HEIGHTS[RESOLUTION_COUNT] = {768, 720, 800, 1024, 768, 900, 900, 1050, 1080, 1200, 1080, 1080, 1440};
 
 bool armed = false;
 bool wasPressed = false;
 bool sequenceRunning = false;
+bool pedalReleased = false;
 bool keyHeld = false;
 bool capsMode = false;
 uint8_t stepIndex = 0;
@@ -146,6 +176,8 @@ char pedalKey = 0;
 void stopSequence();
 void stopScrollSequence();
 void showUi();
+void startMacro(unsigned long now);
+void startScrollAction(unsigned long now);
 
 uint16_t settingsChecksum() {
   const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&settings);
@@ -156,14 +188,35 @@ uint16_t settingsChecksum() {
   return sum;
 }
 
+void setDefaultSettings() {
+  settings.magic = SETTINGS_MAGIC;
+  settings.version = SETTINGS_VERSION;
+  settings.comboMode = 0;
+  settings.resolution = 0;
+  settings.minorKey = 8;
+  settings.manaKey = 7;
+  settings.hpKey = 2;
+  settings.fiveBowKey = 3;
+  settings.threeBowKey = 4;
+  settings.minorDelayIndex = 0;
+  settings.mouseMoveMs = 40;
+  settings.styxDelayMs = 75;
+  settings.bowDelayMs = 0;
+  settings.checksum = 0;
+}
+
 void loadSettings() {
   EEPROM.get(0, settings);
   if (settings.magic != SETTINGS_MAGIC || settings.version != SETTINGS_VERSION ||
-      settings.comboMode > 2 || settings.resolution > 2 ||
+      settings.comboMode > 2 || settings.resolution >= RESOLUTION_COUNT ||
+      settings.minorKey > 9 || settings.manaKey > 9 || settings.hpKey > 9 ||
+      settings.fiveBowKey > 9 || settings.threeBowKey > 9 ||
+      settings.minorDelayIndex >= 4 ||
       settings.mouseMoveMs < 20 || settings.mouseMoveMs > 500 ||
       settings.styxDelayMs < 25 || settings.styxDelayMs > 500 ||
+      settings.bowDelayMs > 200 ||
       settings.checksum != settingsChecksum()) {
-    settings = {SETTINGS_MAGIC, SETTINGS_VERSION, 0, 0, 40, 75, 0};
+    setDefaultSettings();
   }
 }
 
@@ -264,19 +317,48 @@ void showUi() {
     snprintf(top, sizeof(top), "SECIM BEKLENIYOR");
     snprintf(bottom, sizeof(bottom), "BTN TUT: MENU");
   } else if (uiState == UI_ACTIVE) {
-    snprintf(top, sizeof(top), "AKTIF 78/28:%s", settings.comboMode == 0 ? "OTO" : (settings.comboMode == 1 ? "78" : "28"));
-    snprintf(bottom, sizeof(bottom), "BTN TUT: DUR");
+    snprintf(top, sizeof(top), "eKO PEDAL");
+    snprintf(bottom, sizeof(bottom), "HAZIR");
   } else if (uiState == UI_MENU) {
-    snprintf(top, sizeof(top), "MENU %u/%u", menuItem + 1, MENU_COUNT);
-    snprintf(bottom, sizeof(bottom), "%s", MENU_NAMES[menuItem]);
+    if (submenu == 1) {
+      snprintf(top, sizeof(top), "MINOR %u/5", submenuItem + 1);
+      snprintf(bottom, sizeof(bottom), "%s", MINOR_NAMES[submenuItem]);
+    } else if (submenu == 2) {
+      snprintf(top, sizeof(top), "STYX %u/3", submenuItem + 1);
+      snprintf(bottom, sizeof(bottom), "%s", STYX_NAMES[submenuItem]);
+    } else if (submenu == 3) {
+      snprintf(top, sizeof(top), "OKCU %u/4", submenuItem + 1);
+      snprintf(bottom, sizeof(bottom), "%s", BOW_NAMES[submenuItem]);
+    } else {
+      snprintf(top, sizeof(top), "MENU %u/%u", menuItem + 1, MENU_COUNT);
+      snprintf(bottom, sizeof(bottom), "%s", MENU_NAMES[menuItem]);
+    }
   } else {
-    snprintf(top, sizeof(top), "%s", MENU_NAMES[menuItem]);
-    if (menuItem == MENU_COMBO)
-      snprintf(bottom, sizeof(bottom), "%s", settings.comboMode == 0 ? "Auto Caps" : (settings.comboMode == 1 ? "Sadece 78" : "Sadece 28"));
+    if (menuItem == MENU_MINOR) snprintf(top, sizeof(top), "MINOR TUSU");
+    else if (menuItem == MENU_MANA) snprintf(top, sizeof(top), "MANA TUSU");
+    else if (menuItem == MENU_HP) snprintf(top, sizeof(top), "HP TUSU");
+    else if (menuItem == MENU_FIVE_BOW) snprintf(top, sizeof(top), "5LI OK TUSU");
+    else if (menuItem == MENU_THREE_BOW) snprintf(top, sizeof(top), "3LU OK TUSU");
+    else if (menuItem == MENU_MINOR_DELAY) snprintf(top, sizeof(top), "MINOR DELAY");
+    else if (menuItem == MENU_BOW_DELAY) snprintf(top, sizeof(top), "OKCU DELAY");
+    else if (menuItem == MENU_MOUSE) snprintf(top, sizeof(top), "STYX GECIKME");
+    else snprintf(top, sizeof(top), "COZUNURLUK");
+    if (menuItem == MENU_MINOR)
+      snprintf(bottom, sizeof(bottom), "TUS: %u", settings.minorKey);
+    else if (menuItem == MENU_MANA)
+      snprintf(bottom, sizeof(bottom), "TUS: %u", settings.manaKey);
+    else if (menuItem == MENU_HP)
+      snprintf(bottom, sizeof(bottom), "TUS: %u", settings.hpKey);
+    else if (menuItem == MENU_FIVE_BOW)
+      snprintf(bottom, sizeof(bottom), "TUS: %u", settings.fiveBowKey);
+    else if (menuItem == MENU_THREE_BOW)
+      snprintf(bottom, sizeof(bottom), "TUS: %u", settings.threeBowKey);
+    else if (menuItem == MENU_MINOR_DELAY)
+      snprintf(bottom, sizeof(bottom), "%u minor", MINOR_LABEL_VALUES[settings.minorDelayIndex]);
     else if (menuItem == MENU_MOUSE)
       snprintf(bottom, sizeof(bottom), "%u ms", settings.mouseMoveMs);
-    else if (menuItem == MENU_STYX)
-      snprintf(bottom, sizeof(bottom), "%u ms", settings.styxDelayMs);
+    else if (menuItem == MENU_BOW_DELAY)
+      snprintf(bottom, sizeof(bottom), "+%u ms", settings.bowDelayMs);
     else
       snprintf(bottom, sizeof(bottom), "%ux%u", SCREEN_WIDTHS[settings.resolution], SCREEN_HEIGHTS[settings.resolution]);
   }
@@ -302,6 +384,7 @@ void stopSequence() {
   }
   keyHeld = false;
   sequenceRunning = false;
+  pedalReleased = false;
   stepIndex = 0;
 }
 
@@ -314,7 +397,9 @@ void enterMenu() {
   scrollLockPedal.keyHeld = false;
   macroStep = MACRO_IDLE;
   uiState = UI_MENU;
-  menuItem = MENU_RUN;
+  menuItem = MENU_MINOR_GROUP;
+  submenu = 0;
+  submenuItem = 0;
   setPedalLed(false);
   showUi();
 }
@@ -334,14 +419,20 @@ void startActive() {
 }
 
 void adjustSetting(int8_t delta) {
-  if (menuItem == MENU_COMBO) settings.comboMode = static_cast<uint8_t>((settings.comboMode + 3 + delta) % 3);
-  else if (menuItem == MENU_DISPLAY) settings.resolution = static_cast<uint8_t>((settings.resolution + 3 + delta) % 3);
+  if (menuItem == MENU_MINOR) settings.minorKey = static_cast<uint8_t>((settings.minorKey + 10 + delta) % 10);
+  else if (menuItem == MENU_MANA) settings.manaKey = static_cast<uint8_t>((settings.manaKey + 10 + delta) % 10);
+  else if (menuItem == MENU_HP) settings.hpKey = static_cast<uint8_t>((settings.hpKey + 10 + delta) % 10);
+  else if (menuItem == MENU_FIVE_BOW) settings.fiveBowKey = static_cast<uint8_t>((settings.fiveBowKey + 10 + delta) % 10);
+  else if (menuItem == MENU_THREE_BOW) settings.threeBowKey = static_cast<uint8_t>((settings.threeBowKey + 10 + delta) % 10);
+  else if (menuItem == MENU_DISPLAY) settings.resolution = static_cast<uint8_t>((settings.resolution + RESOLUTION_COUNT + delta) % RESOLUTION_COUNT);
+  else if (menuItem == MENU_MINOR_DELAY) settings.minorDelayIndex = static_cast<uint8_t>((settings.minorDelayIndex + 4 + delta) % 4);
+  else if (menuItem == MENU_BOW_DELAY) {
+    const int next = static_cast<int>(settings.bowDelayMs) + 10 * delta;
+    settings.bowDelayMs = static_cast<uint16_t>(constrain(next, 0, 200));
+  }
   else if (menuItem == MENU_MOUSE) {
     const int next = static_cast<int>(settings.mouseMoveMs) + 10 * delta;
     settings.mouseMoveMs = static_cast<uint16_t>(constrain(next, 20, 500));
-  } else if (menuItem == MENU_STYX) {
-    const int next = static_cast<int>(settings.styxDelayMs) + 25 * delta;
-    settings.styxDelayMs = static_cast<uint16_t>(constrain(next, 25, 500));
   }
   settingsDirty = true;
   showUi();
@@ -353,11 +444,54 @@ void selectMenu() {
     uiState = UI_MENU;
     showUi();
   } else if (uiState == UI_MENU) {
-    if (menuItem == MENU_RUN) startActive();
+    if (submenu != 0) {
+      const uint8_t itemCount = submenu == 1 ? 5 : (submenu == 2 ? 3 : 4);
+      if (submenuItem == itemCount - 1) {
+        if (settingsDirty) saveSettings();
+        submenu = 0;
+      } else if (submenu == 1 && submenuItem == 0) {
+        menuItem = MENU_MINOR;
+        uiState = UI_EDIT;
+      } else if (submenu == 1 && submenuItem == 1) {
+        menuItem = MENU_MANA;
+        uiState = UI_EDIT;
+      } else if (submenu == 1 && submenuItem == 2) {
+        menuItem = MENU_HP;
+        uiState = UI_EDIT;
+      } else if (submenu == 1 && submenuItem == 3) {
+        menuItem = MENU_MINOR_DELAY;
+        uiState = UI_EDIT;
+      } else if (submenu == 2 && submenuItem == 0) {
+        menuItem = MENU_MOUSE;
+        uiState = UI_EDIT;
+      } else if (submenu == 2 && submenuItem == 1) {
+        menuItem = MENU_DISPLAY;
+        uiState = UI_EDIT;
+      } else if (submenu == 3 && submenuItem == 0) {
+        menuItem = MENU_FIVE_BOW;
+        uiState = UI_EDIT;
+      } else if (submenu == 3 && submenuItem == 1) {
+        menuItem = MENU_THREE_BOW;
+        uiState = UI_EDIT;
+      } else if (submenu == 3 && submenuItem == 2) {
+        menuItem = MENU_BOW_DELAY;
+        uiState = UI_EDIT;
+      }
+      showUi();
+    }
+    else if (menuItem == MENU_MINOR_GROUP || menuItem == MENU_STYX_GROUP || menuItem == MENU_BOW_GROUP) {
+      submenu = menuItem == MENU_MINOR_GROUP ? 1 : (menuItem == MENU_STYX_GROUP ? 2 : 3);
+      submenuItem = 0;
+      showUi();
+    }
+    else if (menuItem == MENU_DEFAULTS) {
+      setDefaultSettings();
+      settingsDirty = true;
+      showUi();
+    }
     else if (menuItem == MENU_SAVE) {
       if (settingsDirty) saveSettings();
-      uiState = UI_IDLE;
-      showUi();
+      startActive();
     } else {
       uiState = UI_EDIT;
       showUi();
@@ -367,16 +501,38 @@ void selectMenu() {
 
 void menuNext() {
   if (uiState == UI_MENU) {
-    menuItem = static_cast<uint8_t>((menuItem + 1) % MENU_COUNT);
+    if (submenu != 0) {
+      const uint8_t itemCount = submenu == 1 ? 5 : (submenu == 2 ? 3 : 4);
+      submenuItem = static_cast<uint8_t>((submenuItem + 1) % itemCount);
+    }
+    else menuItem = static_cast<uint8_t>((menuItem + 1) % MENU_COUNT);
     showUi();
   } else if (uiState == UI_EDIT) adjustSetting(1);
 }
 
 void menuPrevious() {
   if (uiState == UI_MENU) {
-    menuItem = static_cast<uint8_t>((menuItem + MENU_COUNT - 1) % MENU_COUNT);
+    if (submenu != 0) {
+      const uint8_t itemCount = submenu == 1 ? 5 : (submenu == 2 ? 3 : 4);
+      submenuItem = static_cast<uint8_t>((submenuItem + itemCount - 1) % itemCount);
+    }
+    else menuItem = static_cast<uint8_t>((menuItem + MENU_COUNT - 1) % MENU_COUNT);
     showUi();
   } else if (uiState == UI_EDIT) adjustSetting(-1);
+}
+
+void updateEncoder() {
+  const uint8_t state = static_cast<uint8_t>((digitalRead(ENCODER_A_PIN) << 1) | digitalRead(ENCODER_B_PIN));
+  if (state == encoderLastState) return;
+  const uint8_t transition = static_cast<uint8_t>((encoderLastState << 2) | state);
+  encoderLastState = state;
+  int8_t direction = 0;
+  if (transition == 0b0001 || transition == 0b0111 || transition == 0b1110 || transition == 0b1000) direction = 1;
+  if (transition == 0b0010 || transition == 0b1011 || transition == 0b1101 || transition == 0b0100) direction = -1;
+  if (!direction || (uiState != UI_MENU && uiState != UI_EDIT)) return;
+  encoderQuarterSteps += direction;
+  if (encoderQuarterSteps >= 4) { encoderQuarterSteps = 0; menuNext(); }
+  if (encoderQuarterSteps <= -4) { encoderQuarterSteps = 0; menuPrevious(); }
 }
 
 void onMenuPedal(uint8_t pin) {
@@ -497,6 +653,11 @@ void updateLockPedal(LockPedal &pedal, unsigned long now) {
       Serial.println(" DOWN");
       pedal.keyHeld = true;
       pedal.keyPressedMs = now;
+      if (pedal.pin == NUM_LOCK_PEDAL_PIN) startMacro(now);
+      else if (pedal.pin == SCROLL_LOCK_PEDAL_PIN) {
+        if (scrollRunning) stopScrollSequence();
+        else startScrollAction(now);
+      }
     }
   }
 
@@ -523,8 +684,14 @@ void updateNumLock(unsigned long now) {
   }
 }
 
+char selectedScrollKey() {
+  if (scrollIndex == 0) return static_cast<char>('0' + settings.fiveBowKey);
+  if (scrollIndex == 4) return static_cast<char>('0' + settings.threeBowKey);
+  return SCROLL_STEP_KEYS[scrollIndex];
+}
+
 void setScrollStep(bool pressed) {
-  const char key = SCROLL_STEP_KEYS[scrollIndex];
+  const char key = selectedScrollKey();
   if (key == 0) {
     return;
   }
@@ -533,6 +700,14 @@ void setScrollStep(bool pressed) {
   } else {
     BootKeyboard.release(key);
   }
+}
+
+void startScrollAction(unsigned long now) {
+  if (scrollRunning) return;
+  scrollIndex = 0;
+  setScrollStep(true);
+  scrollNextMs = now + SCROLL_STEP_MS[scrollIndex] + settings.bowDelayMs;
+  scrollRunning = true;
 }
 
 void stopScrollSequence() {
@@ -555,10 +730,7 @@ void updateScrollLock(unsigned long now) {
   if (on != scrollLockWasOn) {
     scrollLockWasOn = on;
     if (on) {
-      scrollIndex = 0;
-      setScrollStep(true);
-      scrollNextMs = now + SCROLL_STEP_MS[scrollIndex];
-      scrollRunning = true;
+      startScrollAction(now);
     } else {
       stopScrollSequence();
     }
@@ -568,7 +740,7 @@ void updateScrollLock(unsigned long now) {
     setScrollStep(false);
     scrollIndex = (scrollIndex + 1) % 8;
     setScrollStep(true);
-    scrollNextMs = now + SCROLL_STEP_MS[scrollIndex];
+    scrollNextMs = now + SCROLL_STEP_MS[scrollIndex] + settings.bowDelayMs;
   }
 }
 
@@ -671,6 +843,8 @@ void setup() {
   loadSettings();
   pinMode(FOOTSWITCH_PIN, INPUT_PULLUP);
   pinMode(MENU_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(ENCODER_A_PIN, INPUT_PULLUP);
+  pinMode(ENCODER_B_PIN, INPUT_PULLUP);
   initLockPedal(numLockPedal);
   initLockPedal(scrollLockPedal);
   pinMode(LED_BUILTIN, OUTPUT);
@@ -678,13 +852,17 @@ void setup() {
   setPedalLed(false);
   menuRawPressed = menuStablePressed = digitalRead(MENU_BUTTON_PIN) == LOW;
   menuRawChangedMs = millis();
+  encoderLastState = static_cast<uint8_t>((digitalRead(ENCODER_A_PIN) << 1) | digitalRead(ENCODER_B_PIN));
   comboMenuRaw = comboMenuStable = digitalRead(FOOTSWITCH_PIN) == LOW;
   comboMenuChangedMs = millis();
   bootMs = millis();
   BootKeyboard.begin();
   BootKeyboard.releaseAll();
   lcdInit();
-  showUi();
+  lcdSetLine(0, "eKO PEDAL");
+  lcdSetLine(1, "Hazirlaniyor");
+  delay(1200);
+  startActive();
 }
 
 void updatePedal(unsigned long now) {
@@ -711,7 +889,26 @@ void updatePedal(unsigned long now) {
     if (now - releaseStartedMs >= RELEASE_DEBOUNCE_MS) {
       armed = true;
     }
-    stopSequence();
+    pedalReleased = true;
+    if (keyHeld) {
+      BootKeyboard.release(pedalKey);
+      keyHeld = false;
+      nextPressMs = now + MINOR_DELAY_MS[settings.minorDelayIndex];
+    }
+    if (sequenceRunning && !keyHeld && stepIndex != 0 && static_cast<int32_t>(now - nextPressMs) >= 0) {
+      pedalKey = static_cast<char>('0' + settings.minorKey);
+      BootKeyboard.press(pedalKey);
+      keyHeld = true;
+      keyPressedMs = now;
+      stepIndex = 0;
+    }
+    if (keyHeld && now - keyPressedMs >= KEY_HOLD_MS) {
+      BootKeyboard.release(pedalKey);
+      keyHeld = false;
+    }
+    if (sequenceRunning && stepIndex == 0 && !keyHeld) {
+      stopSequence();
+    }
     return;
   }
 
@@ -725,6 +922,7 @@ void updatePedal(unsigned long now) {
     }
     armed = false;
     sequenceRunning = true;
+    pedalReleased = false;
     capsMode = capsLockOn();
     stepIndex = 0;
     nextPressMs = now;
@@ -745,13 +943,16 @@ void updatePedal(unsigned long now) {
     if (now - keyPressedMs >= KEY_HOLD_MS) {
       BootKeyboard.release(pedalKey);
       keyHeld = false;
-      nextPressMs = now + KEY_GAP_MS;
+      nextPressMs = now + MINOR_DELAY_MS[settings.minorDelayIndex];
     }
     return;
   }
 
   if (static_cast<int32_t>(now - nextPressMs) >= 0) {
-    pedalKey = stepIndex == 0 ? (capsMode ? '2' : '7') : '8';
+    const uint8_t selectedKey = stepIndex == 0
+      ? (capsMode ? settings.hpKey : settings.manaKey)
+      : settings.minorKey;
+    pedalKey = static_cast<char>('0' + selectedKey);
     BootKeyboard.press(pedalKey);
     keyHeld = true;
     keyPressedMs = now;
@@ -762,6 +963,7 @@ void updatePedal(unsigned long now) {
 void loop() {
   const unsigned long now = millis();
   updateMenuButton(now);
+  updateEncoder();
   updatePedal(now);
   updateLockPedal(numLockPedal, now);
   updateLockPedal(scrollLockPedal, now);
