@@ -1,5 +1,11 @@
 # Arduino Leonardo Footswitch
 
+## Güncel proje durumu
+
+Windows'ta devam ederken önce [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md)
+dosyasını okuyun. Güncel firmware `firmware/leonardo_menu/leonardo_menu.ino`
+içindedir; ilk çalışan sürüm `firmware/leonardo_footswitch/` altında korunur.
+
 Yeni hedef, bilgisayar uygulamasi olmadan calisan bir USB footswitch'tir.
 `firmware/leonardo_footswitch/` taslagi D8 pedal girisini ve bilgisayarin
 Caps Lock LED durumunu kullanir. Pedal basiliyken Caps Lock kapaliysa `7 8 8 8`,

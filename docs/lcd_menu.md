@@ -1,7 +1,9 @@
 # LCD menulu Leonardo surumu
 
-Firmware: `firmware/leonardo_menu/leonardo_menu.ino`. Bu yeni surum henuz karta
-yuklenmedi; once buton ve LCD baglantilari dogrulanacak. Daha onceki calisan
+Guncel durum ve Windows'ta devam adimlari icin `docs/PROJECT_STATE.md` dosyasini
+esas alin. Bu belge ilk wiring calismalarinin notlarini da icerir.
+
+Firmware: `firmware/leonardo_menu/leonardo_menu.ino`. Daha onceki calisan
 surum `firmware/leonardo_footswitch/leonardo_footswitch.ino` olarak sakli.
 
 ## Pinler
@@ -11,7 +13,10 @@ surum `firmware/leonardo_footswitch/leonardo_footswitch.ino` olarak sakli.
 | 78/28 kombo pedali | D8 | GND |
 | Num Lock pedali | **D5** (eski D3 kablosu tasinacak) | GND |
 | Scroll Lock pedali | D4 | GND |
-| Anlik menu butonu (yalniz anahtar kontagi) | D7 | GND |
+| Encoder basma kontagi | D7 | GND |
+| Encoder A donus kontagi | D6 | - |
+| Encoder B donus kontagi | D9 | - |
+| Encoder ortak donus kontagi | GND | - |
 | HW-61 LCD GND | GND | - |
 | HW-61 LCD VCC | 5V | - |
 | HW-61 LCD SDA | D2 / SDA | - |
@@ -40,6 +45,7 @@ kontrast potunu kontrol edin. Farkli pin eslemeli backpack ayrica ayar ister.
   kombo/scroll/makroyu durdurur ve menuyu acar.
 - Menude butona kisa bas veya D5 pedalina bas: sonraki oge.
 - D8 pedalina bas: onceki oge.
+- Encoder'i saat yonunde veya tersine cevir: menu oge/ayar degistir.
 - Butona uzun bas veya D4 pedalina bas: ogeye gir/onayla.
 - Bir ayar icinde D8 azaltir, D5 artirir. D4 veya uzun buton kaydeder ve
   menuye doner.
